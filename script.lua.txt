@@ -1,0 +1,69 @@
+-- Obfuscated ToanRoblox Auto Farm
+local H={"local player=game.Players.LocalPlayer","local character=player.Character or player.CharacterAdded:Wait()","local hrp=character:WaitForChild('HumanoidRootPart')"}
+local function a(i) return loadstring(H[i])() end
+local player=a(1)
+local character=a(2)
+local hrp=a(3)
+
+local autoFarm=false
+
+local function f()
+    local nearest=nil
+    local minDistance=math.huge
+    for _,v in pairs(workspace:GetChildren()) do
+        if v.Name=="Coin" and v:IsA("BasePart") then
+            local d=(hrp.Position-v.Position).Magnitude
+            if d<minDistance then nearest=v minDistance=d end
+        end
+    end
+    return nearest
+end
+
+local function m()
+    local g=Instance.new("ScreenGui")
+    g.Name="\84\111\97\110\82\111\98\108\111\120"
+    g.Parent=game.CoreGui
+    local f=Instance.new("Frame")
+    f.Size=UDim2.new(0,220,0,120)
+    f.Position=UDim2.new(0.5,-110,0.5,-60)
+    f.BackgroundColor3=Color3.fromRGB(0,0,0)
+    f.BorderSizePixel=0
+    f.Parent=g
+    local t=Instance.new("TextLabel")
+    t.Size=UDim2.new(1,0,0,30)
+    t.BackgroundTransparency=1
+    t.Text="\84\111\97\110\82\111\98\108\111\120"
+    t.TextColor3=Color3.fromRGB(255,255,255)
+    t.Font=Enum.Font.SourceSansBold
+    t.TextSize=20
+    t.Parent=f
+    local b=Instance.new("TextButton")
+    b.Size=UDim2.new(0.8,0,0,40)
+    b.Position=UDim2.new(0.1,0,0.4,0)
+    b.BackgroundColor3=Color3.fromRGB(50,50,50)
+    b.TextColor3=Color3.fromRGB(255,255,255)
+    b.Text="\66\97\116\65\117\116\111\70\97\114\109"
+    b.Font=Enum.Font.SourceSansBold
+    b.TextSize=18
+    b.Parent=f
+    b.MouseButton1Click:Connect(function()
+        autoFarm=not autoFarm
+        if autoFarm then
+            b.Text="\84\97\116\65\117\116\111\70\97\114\109"
+        else
+            b.Text="\66\97\116\65\117\116\111\70\97\114\109"
+        end
+    end)
+end
+
+m()
+
+spawn(function()
+    while true do
+        if autoFarm then
+            local c=f()
+            if c then hrp.CFrame=CFrame.new(c.Position) end
+        end
+        task.wait(0.1)
+    end
+end)
