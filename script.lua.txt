@@ -1,69 +1,252 @@
--- Obfuscated ToanRoblox Auto Farm
-local H={"local player=game.Players.LocalPlayer","local character=player.Character or player.CharacterAdded:Wait()","local hrp=character:WaitForChild('HumanoidRootPart')"}
-local function a(i) return loadstring(H[i])() end
-local player=a(1)
-local character=a(2)
-local hrp=a(3)
+pcall(function()
+repeat task.wait() until game:IsLoaded()
 
-local autoFarm=false
+local Players = game:GetService("Players")  
+local TeleportService = game:GetService("TeleportService")  
+local GuiService = game:GetService("GuiService")  
+local TweenService = game:GetService("TweenService")  
+local UserInputService = game:GetService("UserInputService")  
+local LocalPlayer = Players.LocalPlayer  
+local placeId = game.PlaceId  
 
-local function f()
-    local nearest=nil
-    local minDistance=math.huge
-    for _,v in pairs(workspace:GetChildren()) do
-        if v.Name=="Coin" and v:IsA("BasePart") then
-            local d=(hrp.Position-v.Position).Magnitude
-            if d<minDistance then nearest=v minDistance=d end
-        end
-    end
-    return nearest
-end
+local GC = getconnections or get_signal_cons  
+if GC then  
+    for _, v in pairs(GC(LocalPlayer.Idled)) do  
+        if v.Disable then v:Disable() elseif v.Disconnect then v:Disconnect() end  
+    end  
+else  
+    local vu = game:GetService("VirtualUser")  
+    LocalPlayer.Idled:Connect(function()  
+        vu:CaptureController()  
+        vu:ClickButton2(Vector2.new())  
+    end)  
+end  
 
-local function m()
-    local g=Instance.new("ScreenGui")
-    g.Name="\84\111\97\110\82\111\98\108\111\120"
-    g.Parent=game.CoreGui
-    local f=Instance.new("Frame")
-    f.Size=UDim2.new(0,220,0,120)
-    f.Position=UDim2.new(0.5,-110,0.5,-60)
-    f.BackgroundColor3=Color3.fromRGB(0,0,0)
-    f.BorderSizePixel=0
-    f.Parent=g
-    local t=Instance.new("TextLabel")
-    t.Size=UDim2.new(1,0,0,30)
-    t.BackgroundTransparency=1
-    t.Text="\84\111\97\110\82\111\98\108\111\120"
-    t.TextColor3=Color3.fromRGB(255,255,255)
-    t.Font=Enum.Font.SourceSansBold
-    t.TextSize=20
-    t.Parent=f
-    local b=Instance.new("TextButton")
-    b.Size=UDim2.new(0.8,0,0,40)
-    b.Position=UDim2.new(0.1,0,0.4,0)
-    b.BackgroundColor3=Color3.fromRGB(50,50,50)
-    b.TextColor3=Color3.fromRGB(255,255,255)
-    b.Text="\66\97\116\65\117\116\111\70\97\114\109"
-    b.Font=Enum.Font.SourceSansBold
-    b.TextSize=18
-    b.Parent=f
-    b.MouseButton1Click:Connect(function()
-        autoFarm=not autoFarm
-        if autoFarm then
-            b.Text="\84\97\116\65\117\116\111\70\97\114\109"
-        else
-            b.Text="\66\97\116\65\117\116\111\70\97\114\109"
-        end
-    end)
-end
+GuiService.ErrorMessageChanged:Connect(function()  
+    while task.wait(2) do  
+        local suc, _ = pcall(function()  
+            TeleportService:TeleportToPlaceInstance(placeId, game.JobId, LocalPlayer)  
+        end)  
+        if suc then break end  
+    end  
+end)  
 
-m()
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")  
+if playerGui:FindFirstChild("AutoFarmGui") then playerGui.AutoFarmGui:Destroy() end  
 
-spawn(function()
-    while true do
-        if autoFarm then
-            local c=f()
-            if c then hrp.CFrame=CFrame.new(c.Position) end
-        end
-        task.wait(0.1)
-    end
+local ScreenGui = Instance.new("ScreenGui")  
+ScreenGui.Name = "AutoFarmGui"  
+ScreenGui.ResetOnSpawn = false  
+ScreenGui.Parent = playerGui  
+
+local Frame = Instance.new("Frame")  
+Frame.Size = UDim2.new(0, 230, 0, 180)  
+Frame.Position = UDim2.new(0, 20, 0, 100)  
+Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  
+Frame.Active = true  
+Frame.Draggable = true  
+Frame.Parent = ScreenGui  
+
+local LabelCredit = Instance.new("TextLabel", Frame)  
+LabelCredit.Size = UDim2.new(1, -10, 0, 20)  
+LabelCredit.Position = UDim2.new(0, 5, 0, 5)  
+LabelCredit.BackgroundTransparency = 1  
+LabelCredit.TextColor3 = Color3.fromRGB(255, 255, 255)  
+LabelCredit.Text = "Made by Toàn"  
+LabelCredit.Font = Enum.Font.SourceSansBold  
+LabelCredit.TextSize = 18  
+
+local LabelStats = Instance.new("TextLabel", Frame)  
+LabelStats.Size = UDim2.new(1, -10, 0, 40)  
+LabelStats.Position = UDim2.new(0, 5, 0, 30)  
+LabelStats.BackgroundTransparency = 1  
+LabelStats.TextColor3 = Color3.fromRGB(255, 255, 0)  
+LabelStats.Text = "Ball nhặt: 0 | +0/s | Thời gian: 0s"  
+LabelStats.Font = Enum.Font.SourceSans  
+LabelStats.TextSize = 16  
+
+local LabelStatus = Instance.new("TextLabel", Frame)  
+LabelStatus.Size = UDim2.new(1, -10, 0, 20)  
+LabelStatus.Position = UDim2.new(0, 5, 0, 70)  
+LabelStatus.BackgroundTransparency = 1  
+LabelStatus.TextColor3 = Color3.fromRGB(100, 200, 255)  
+LabelStatus.Text = "⏳ Đang chờ round bắt đầu..."  
+LabelStatus.Font = Enum.Font.SourceSansItalic  
+LabelStatus.TextSize = 16  
+
+local ButtonFarm = Instance.new("TextButton", Frame)  
+ButtonFarm.Size = UDim2.new(1, -10, 0, 30)  
+ButtonFarm.Position = UDim2.new(0, 5, 0, 100)  
+ButtonFarm.BackgroundColor3 = Color3.fromRGB(30, 30, 30)  
+ButtonFarm.TextColor3 = Color3.fromRGB(255, 255, 255)  
+ButtonFarm.Text = "Bật Auto Farm"  
+
+local ButtonExit = Instance.new("TextButton", Frame)  
+ButtonExit.Size = UDim2.new(1, -10, 0, 30)  
+ButtonExit.Position = UDim2.new(0, 5, 0, 140)  
+ButtonExit.BackgroundColor3 = Color3.fromRGB(50, 0, 0)  
+ButtonExit.TextColor3 = Color3.fromRGB(255, 255, 255)  
+ButtonExit.Text = "Tắt Script"  
+
+local autoFarm = false  
+local userToggledFarm = false  
+local roundActive = false  
+local map  
+  
+game.Workspace.DescendantAdded:Connect(function(m)  
+    if m:IsA("Model") and m:GetAttribute("MapID") then  
+        map = m  
+        roundActive = true  
+        LabelStatus.Text = "🗺️ Round mới phát hiện!"  
+        if userToggledFarm then  
+            task.wait(1)  
+            autoFarm = true  
+            LabelStatus.Text = "🟢 Round mới! Tiếp tục farm..."  
+        end  
+    end  
+end)  
+
+game.Workspace.DescendantRemoving:Connect(function(m)  
+    if m == map then  
+        map = nil  
+        roundActive = false  
+        autoFarm = false  
+        LabelStatus.Text = "⏳ Round kết thúc - Đang chờ round mới..."  
+        -- Chờ round mới để tự bật farm  
+        task.spawn(function()  
+            while not roundActive do task.wait(0.5) end  
+            if userToggledFarm then  
+                autoFarm = true  
+                LabelStatus.Text = "🟢 Round mới! Tiếp tục farm..."  
+            end  
+        end)  
+    end  
+end)  
+
+ButtonFarm.MouseButton1Click:Connect(function()  
+    userToggledFarm = not userToggledFarm  
+    autoFarm = userToggledFarm and roundActive or false  
+    ButtonFarm.Text = userToggledFarm and "Tắt Auto Farm" or "Bật Auto Farm"  
+    LabelStatus.Text = autoFarm and "🟢 Đang farm..." or "⏸️ Đang tạm dừng..."  
+end)  
+
+ButtonExit.MouseButton1Click:Connect(function()  
+    ScreenGui:Destroy()  
+    autoFarm = false  
+    userToggledFarm = false  
+end)  
+
+UserInputService.InputBegan:Connect(function(input, processed)  
+    if processed then return end  
+    if input.KeyCode == Enum.KeyCode.M then Frame.Visible = not Frame.Visible end  
+end)  
+
+local speed = 32  
+
+local function getCharParts(character)  
+    local hrp, humanoid  
+    repeat  
+        task.wait(0.1)  
+        if character then  
+            hrp = character:FindFirstChild("HumanoidRootPart")  
+            humanoid = character:FindFirstChild("Humanoid")  
+        end  
+    until hrp and humanoid  
+    return hrp, humanoid  
+end  
+
+local currentTween = nil  
+local function tweenTo(pos, speed)  
+    local hrp, _ = getCharParts(LocalPlayer.Character)  
+    if not hrp then return end  
+    local dist = (pos - hrp.Position).Magnitude  
+    local time = math.max(dist / speed, 0.2)  
+    if currentTween then currentTween:Cancel() end  
+    currentTween = TweenService:Create(hrp, TweenInfo.new(time, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})  
+    currentTween:Play()  
+    currentTween.Completed:Wait()  
+end  
+
+local function getBall()  
+    local success, value = pcall(function()  
+        if LocalPlayer:FindFirstChild("leaderstats") and LocalPlayer.leaderstats:FindFirstChild("Coins") then  
+            return LocalPlayer.leaderstats.Coins.Value  
+        end  
+        if LocalPlayer:FindFirstChild("Data") and LocalPlayer.Data:FindFirstChild("BeachBall") then  
+            return LocalPlayer.Data.BeachBall.Value  
+        end  
+        if LocalPlayer:FindFirstChild("BallInventory") then  
+            return LocalPlayer.BallInventory.Value  
+        end  
+        return 0  
+    end)  
+    return success and value or 0  
+end  
+
+local function monitorHealth(humanoid)  
+    humanoid.Died:Connect(function()  
+        if currentTween then currentTween:Cancel() end  
+        autoFarm = false  
+        LabelStatus.Text = "💀 Nhân vật đã chết - chờ round mới..."  
+        -- Tự động farm lại khi map mới spawn  
+        task.spawn(function()  
+            while not roundActive do task.wait(0.5) end  
+            if userToggledFarm then  
+                autoFarm = true  
+                LabelStatus.Text = "🟢 Nhân vật respawn - Tiếp tục farm..."  
+            end  
+        end)  
+    end)  
+end  
+
+local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()  
+local _, hum = getCharParts(char)  
+if hum then monitorHealth(hum) end  
+
+LocalPlayer.CharacterAdded:Connect(function(newChar)  
+    task.wait(0.5)  
+    char = newChar  
+    local _, newHum = getCharParts(newChar)  
+    if newHum then monitorHealth(newHum) end  
+    autoFarm = false  
+    LabelStatus.Text = "⚙️ Đang respawn - chờ round mới..."  
+end)  
+
+local lastBallCount, totalBallPicked, startTime, MAX_BALL = 0, 0, tick(), 40  
+
+task.spawn(function()  
+    while task.wait(0.05) do  
+        if autoFarm and map and map:FindFirstChild("CoinContainer") then  
+            local hrp, _ = getCharParts(LocalPlayer.Character)  
+            local coins = map.CoinContainer:GetChildren()  
+            local nearest, minDist = nil, math.huge  
+            for _, coin in ipairs(coins) do  
+                if coin:IsA("Part") and (coin.Name == "Coin_Server" or coin.Name == "Coin" or coin.Name == "Ball") then  
+                    local cv = coin:FindFirstChild("CoinVisual")  
+                    if (not cv or cv.Transparency ~= 1) then  
+                        local dist = (hrp.Position - coin.Position).Magnitude  
+                        if dist < minDist then nearest, minDist = coin, dist end  
+                    end  
+                end  
+            end  
+            if nearest then tweenTo(nearest.Position, speed) end  
+        end  
+    end  
+end)  
+
+task.spawn(function()  
+    while task.wait(1) do  
+        local currentBall = getBall()  
+        local ballThisSecond = math.max(currentBall - lastBallCount, 0)  
+        lastBallCount = currentBall  
+        totalBallPicked = totalBallPicked + ballThisSecond  
+        local elapsed = math.floor(tick() - startTime)  
+        LabelStats.Text = "Ball nhặt: "..totalBallPicked.." | +"..ballThisSecond.."/s | Thời gian: "..elapsed.."s"  
+
+        if autoFarm and currentBall >= MAX_BALL then  
+            TeleportService:Teleport(placeId, LocalPlayer)  
+        end  
+    end  
+end)
+
 end)
