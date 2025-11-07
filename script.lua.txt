@@ -9,6 +9,7 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer  
 local placeId = game.PlaceId  
 
+-- Anti-AFK
 local GC = getconnections or get_signal_cons  
 if GC then  
     for _, v in pairs(GC(LocalPlayer.Idled)) do  
@@ -22,6 +23,7 @@ else
     end)  
 end  
 
+-- Teleport khi error
 GuiService.ErrorMessageChanged:Connect(function()  
     while task.wait(2) do  
         local suc, _ = pcall(function()  
@@ -31,6 +33,7 @@ GuiService.ErrorMessageChanged:Connect(function()
     end  
 end)  
 
+-- GUI
 local playerGui = LocalPlayer:WaitForChild("PlayerGui")  
 if playerGui:FindFirstChild("AutoFarmGui") then playerGui.AutoFarmGui:Destroy() end  
 
@@ -92,9 +95,8 @@ local autoFarm = false
 local userToggledFarm = false  
 local roundActive = false  
 local map  
-local currentTween = nil
 
--- ROUND BẮT ĐẦU
+-- Round detection
 game.Workspace.DescendantAdded:Connect(function(m)  
     if m:IsA("Model") and m:GetAttribute("MapID") then  
         map = m  
@@ -108,12 +110,10 @@ game.Workspace.DescendantAdded:Connect(function(m)
     end  
 end)  
 
--- ROUND KẾT THÚC
 game.Workspace.DescendantRemoving:Connect(function(m)  
     if m == map then  
         map = nil  
         roundActive = false  
-        if currentTween then currentTween:Cancel() end  
         autoFarm = false  
         LabelStatus.Text = "⏳ Round kết thúc - Đang chờ round mới..."  
         task.spawn(function()  
@@ -137,7 +137,6 @@ ButtonExit.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()  
     autoFarm = false  
     userToggledFarm = false  
-    if currentTween then currentTween:Cancel() end  
 end)  
 
 UserInputService.InputBegan:Connect(function(input, processed)  
@@ -149,7 +148,8 @@ local speed = 32
 
 local function getCharParts(character)  
     local hrp, humanoid  
-    repeat task.wait(0.1)  
+    repeat  
+        task.wait(0.1)  
         if character then  
             hrp = character:FindFirstChild("HumanoidRootPart")  
             humanoid = character:FindFirstChild("Humanoid")  
@@ -158,6 +158,7 @@ local function getCharParts(character)
     return hrp, humanoid  
 end  
 
+local currentTween = nil  
 local function tweenTo(pos, speed)  
     local hrp, _ = getCharParts(LocalPlayer.Character)  
     if not hrp then return end  
@@ -169,23 +170,7 @@ local function tweenTo(pos, speed)
     currentTween.Completed:Wait()  
 end  
 
-local function getBall()  
-    local success, value = pcall(function()  
-        if LocalPlayer:FindFirstChild("leaderstats") and LocalPlayer.leaderstats:FindFirstChild("Coins") then  
-            return LocalPlayer.leaderstats.Coins.Value  
-        end  
-        if LocalPlayer:FindFirstChild("Data") and LocalPlayer.Data:FindFirstChild("BeachBall") then  
-            return LocalPlayer.Data.BeachBall.Value  
-        end  
-        if LocalPlayer:FindFirstChild("BallInventory") then  
-            return LocalPlayer.BallInventory.Value  
-        end  
-        return 0  
-    end)  
-    return success and value or 0  
-end  
-
--- XỬ LÝ KHI NHÂN VẬT CHẾT
+-- Monitor death
 local function monitorHealth(humanoid)  
     humanoid.Died:Connect(function()  
         if currentTween then currentTween:Cancel() end  
@@ -195,7 +180,7 @@ local function monitorHealth(humanoid)
             while not roundActive do task.wait(0.5) end  
             if userToggledFarm then  
                 autoFarm = true  
-                LabelStatus.Text = "🟢 Round mới! Nhân vật đã respawn - tiếp tục farm..."  
+                LabelStatus.Text = "🟢 Nhân vật respawn - Tiếp tục farm..."  
             end  
         end)  
     end)  
@@ -207,16 +192,18 @@ if hum then monitorHealth(hum) end
 
 LocalPlayer.CharacterAdded:Connect(function(newChar)  
     task.wait(0.5)  
+    char = newChar  
     local _, newHum = getCharParts(newChar)  
     if newHum then monitorHealth(newHum) end  
     autoFarm = false  
-    if currentTween then currentTween:Cancel() end  
-    LabelStatus.Text = "⚙️ Nhân vật respawn - chờ round mới..."  
+    LabelStatus.Text = "⚙️ Đang respawn - chờ round mới..."  
 end)  
 
-local lastBallCount, totalBallPicked, startTime, MAX_BALL = 0, 0, tick(), 40  
+-- Counter coin nhặt cho MM2
+local totalBallPicked, startTime, MAX_BALL = 0, tick(), 40
+local roundCoinCount = 0
 
-task.spawn(function()  
+task.spawn(function()
     while task.wait(0.05) do  
         if autoFarm and map and map:FindFirstChild("CoinContainer") then  
             local hrp, _ = getCharParts(LocalPlayer.Character)  
@@ -231,23 +218,32 @@ task.spawn(function()
                     end  
                 end  
             end  
-            if nearest then tweenTo(nearest.Position, speed) end  
-        end  
-    end  
-end)  
+            if nearest then
+                tweenTo(nearest.Position, speed)
+                -- kiểm tra nhặt coin
+                if hrp and (hrp.Position - nearest.Position).Magnitude < 6 then
+                    roundCoinCount = roundCoinCount + 1
+                end
+            end
+        end
+    end
+end)
 
-task.spawn(function()  
-    while task.wait(1) do  
-        local currentBall = getBall()  
-        local ballThisSecond = math.max(currentBall - lastBallCount, 0)  
-        lastBallCount = currentBall  
-        totalBallPicked = totalBallPicked + ballThisSecond  
-        local elapsed = math.floor(tick() - startTime)  
-        LabelStats.Text = "Ball nhặt: "..totalBallPicked.." | +"..ballThisSecond.."/s | Thời gian: "..elapsed.."s"  
+-- Cập nhật GUI và reset khi đủ 40 coin
+task.spawn(function()
+    while task.wait(1) do
+        local elapsed = math.floor(tick() - startTime)
+        LabelStats.Text = "Ball nhặt: "..roundCoinCount.." | Thời gian: "..elapsed.."s"
 
-        if autoFarm and currentBall >= MAX_BALL then  
-            TeleportService:Teleport(placeId, LocalPlayer)  
-        end  
-    end  
+        if autoFarm and roundCoinCount >= MAX_BALL then
+            LabelStatus.Text = "🔁 Đủ 40 coin - Reset nhân vật..."
+            local character = LocalPlayer.Character
+            if character and character:FindFirstChildOfClass("Humanoid") then
+                character:FindFirstChildOfClass("Humanoid"):TakeDamage(9999)
+            end
+            task.wait(3)
+            roundCoinCount = 0
+        end
+    end
 end)
 end)
